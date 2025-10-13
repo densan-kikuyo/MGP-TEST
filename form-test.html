@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>おみやげグランプリ 投票</title>
+  <style>
+    /* ===== 見た目（ポップ基調） ===== */
+    :root{
+      --bg:#fff7f0; --brand:#ffcf66; --accent:#27c3a9; --accent-d:#1ea18c; --pick:#ff7a7a;
+    }
+    html,body{margin:0;padding:0;background:var(--bg);color:#222;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif}
+    header{padding:16px 20px;text-align:center;background:var(--brand);position:sticky;top:0;z-index:10;box-shadow:0 2px 0 rgba(0,0,0,.06)}
+    header h1{margin:0;font-size:20px}
+    .wrap{padding:16px;max-width:1100px;margin:0 auto}
+    .note{margin:8px 0 16px;font-size:14px;color:#444}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+    @media(min-width:720px){.grid{grid-template-columns:repeat(3,1fr)}}
+    @media(min-width:1024px){.grid{grid-template-columns:repeat(4,1fr)}}
+
+    .card{background:#fff;border-radius:14px;overflow:hidden;border:3px solid transparent;position:relative;box-shadow:0 4px 0 rgba(0,0,0,.06)}
+    .card button{all:unset;display:block;cursor:pointer}
+    .card img{width:100%;height:150px;object-fit:cover;display:block}
+    .label{padding:10px 12px;font-weight:700;text-align:center}
+    .badge{position:absolute;top:8px;left:8px;background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;box-shadow:0 2px 0 rgba(0,0,0,.08)}
+    .selected{border-color:var(--pick)}
+    .selected::after{content:"✓";position:absolute;right:8px;top:8px;background:var(--pick);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+
+    .actions{position:sticky;bottom:0;background:linear-gradient(180deg,rgba(255,247,240,0),var(--bg) 40%);padding:16px}
+    .btn{width:100%;font-size:18px;font-weight:800;padding:14px 18px;border:none;border-radius:12px;background:var(--accent);color:#fff;box-shadow:0 6px 0 var(--accent-d);transition:transform .05s}
+    .btn:active{transform:translateY(2px);box-shadow:0 4px 0 var(--accent-d)}
+    .btn[disabled]{background:#c7eae3;box-shadow:none;color:#6b6b6b}
+    .counter{text-align:center;font-size:14px;margin:6px 0 0;color:#333}
+
+    /* インラインの軽量トースト（fetch版用だがPOST版でも一応残す） */
+    .toast{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:50}
+    .toast>div{background:#fff;border-radius:16px;padding:28px 22px;text-align:center;width:min(90vw,420px);box-shadow:0 10px 0 rgba(0,0,0,.12)}
+    .toast h2{margin:0 0 8px;font-size:22px}
+    .toast p{margin:0;color:#555}
+  </style>
+</head>
+<body>
+  <header><h1>🌟 第1回 おみやげグランプリ 投票 🌟</h1></header>
+
+  <div class="wrap">
+    <p class="note">気に入ったおみやげを <b>最大3つまで</b> タップして選んでください。（組織ログイン版）</p>
+
+    <div id="grid" class="grid"></div>
+
+    <div class="actions">
+      <button id="submitBtn" class="btn" disabled>投票！！</button>
+      <div class="counter"><span id="count">0</span>/3 選択中</div>
+    </div>
+  </div>
+
+  <!-- フェールセーフ用トースト（POST遷移が基本なので通常は未使用） -->
+  <div id="thanks" class="toast" role="alertdialog" aria-live="assertive">
+    <div>
+      <h2>投票ありがとうございました！！ 🎉</h2>
+      <p>2秒後に最初の画面に戻ります…</p>
+    </div>
+  </div>
+
+  <script>
+    // =====================
+    // 設 定
+    // =====================
+    // 1) GASウェブアプリの/exec URL を設定（デプロイ時に控えたURL）
+    const FORM_ENDPOINT = "PUT_YOUR_GAS_EXEC_URL_HERE"; // 例: https://script.google.com/macros/s/XXXX/exec
+
+    // 2) 端末識別（iPadごとに変えると集計便利）
+    const DEVICE_ID = "KIOSK_A";  // KIOSK_A / KIOSK_B / KIOSK_C …
+
+    // 3) 同時選択上限
+    const MAX_SELECT = 3;
+
+    // 4) 商品リスト（画像は /images 配下に置く想定）
+    const ITEMS = [
+      { id:"id_01", name:"A. いきなり団子", img:"images/01.jpg" },
+      { id:"id_02", name:"B. からし蓮根",   img:"images/02.jpg" },
+      { id:"id_03", name:"C. 馬肉コロッケ", img:"images/03.jpg" },
+      { id:"id_04", name:"D. 柚子ようかん", img:"images/04.jpg" },
+      { id:"id_05", name:"E. 米粉フィナンシェ", img:"images/05.jpg" },
+      { id:"id_06", name:"F. 玄米クッキー", img:"images/06.jpg" },
+      { id:"id_07", name:"G. トマトジャム", img:"images/07.jpg" },
+      { id:"id_08", name:"H. ほうじ茶プリン", img:"images/08.jpg" },
+      { id:"id_09", name:"I. 味噌だれ餃子", img:"images/09.jpg" },
+      { id:"id_10", name:"J. 蓮根チップス", img:"images/10.jpg" }
+    ];
+    // =====================
+
+    const grid = document.getElementById('grid');
+    const submitBtn = document.getElementById('submitBtn');
+    const countEl = document.getElementById('count');
+    const thanks = document.getElementById('thanks');
+    let selected = new Set();
+
+    function renderGrid(){
+      grid.innerHTML = '';
+      ITEMS.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = item.id;
+
+        const btn = document.createElement('button');
+        btn.onclick = () => toggleSelect(item.id, card);
+
+        const img = document.createElement('img');
+        img.src = item.img; img.alt = item.name;
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = item.name;
+
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = String.fromCharCode(0x2460 + idx); // ①②③…
+
+        btn.appendChild(img);
+        btn.appendChild(label);
+        card.appendChild(btn);
+        card.appendChild(badge);
+        grid.appendChild(card);
+      });
+    }
+
+    function toggleSelect(id, cardEl){
+      if (selected.has(id)) {
+        selected.delete(id);
+        cardEl.classList.remove('selected');
+      } else {
+        if (selected.size >= MAX_SELECT) {
+          // 4つ目は不可：軽い振動演出
+          cardEl.animate([
+            {transform:'translateY(0)'},
+            {transform:'translateY(-3px)'},
+            {transform:'translateY(0)'}
+          ], {duration:120});
+          return;
+        }
+        selected.add(id);
+        cardEl.classList.add('selected');
+      }
+      updateUI();
+    }
+
+    function updateUI(){
+      countEl.textContent = selected.size;
+      submitBtn.disabled = (selected.size === 0);
+    }
+
+    // ===== ここが「組織ログイン前提版」のキモ =====
+    // fetch ではなく、フォームPOSTでGASへ画面遷移して送信
+    function postByForm(choices, deviceId){
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = FORM_ENDPOINT;  // GASの/exec に遷移
+      form.style.display = 'none';
+
+      const add = (name, value) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      };
+
+      add('choices', choices.join(','));   // 例: "id_01,id_03,id_05"
+      add('device_id', deviceId);
+      add('ua', navigator.userAgent);
+
+      document.body.appendChild(form);
+      form.submit(); // ← ここでGASへ遷移（GAS側で2秒サンクス→元URLへ戻す）
+    }
+
+    submitBtn.addEventListener('click', () => {
+      if (selected.size === 0) return;
+      postByForm(Array.from(selected), DEVICE_ID);
+    });
+
+    function resetForm(){
+      selected.clear();
+      document.querySelectorAll('.card').forEach(el => el.classList.remove('selected'));
+      updateUI();
+      window.scrollTo({ top:0, behavior:'smooth' });
+    }
+
+    renderGrid();
+    updateUI();
+  </script>
+</body>
+</html>
