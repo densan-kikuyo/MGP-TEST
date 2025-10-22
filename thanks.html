@@ -12,12 +12,11 @@
 <div class="card">
   <h1>投票ありがとうございました！！ 🎉</h1>
   <p>2秒後に最初の画面へ戻ります…</p>
-  <p><a id="back" class="btn" href="./">戻らない場合はこちら</a></p>
+  <p><a id="back" class="btn" href="https://densan-kikuyo.github.io/MGP-TEST/form-test.html">戻らない場合はこちら</a></p>
 </div>
 <script>
-  // GAS から ?back=... が渡ってくる想定。なければ ./ に戻す
-  const sp = new URLSearchParams(location.search);
-  const back = sp.get('back') || './';
-  document.getElementById('back').href = back;
-  setTimeout(()=>{ try{ top.location.replace(back);}catch(_){ location.replace(back);} }, 1800);
+  const BACK = "https://densan-kikuyo.github.io/MGP-TEST/form-test.html";
+  // メタ＋JSの二段構え（iOS対策＆キャッシュ回避）
+  const backWithBust = BACK + "?_=" + Date.now();
+  setTimeout(()=>{ try{ top.location.replace(backWithBust);}catch(_){ location.replace(backWithBust);} }, 1800);
 </script>
