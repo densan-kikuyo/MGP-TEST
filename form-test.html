@@ -153,30 +153,19 @@
     // fetch ではなく、フォームPOSTでGASへ画面遷移して送信
     function postByForm(choices, deviceId){
       const form = document.createElement('form');
-      form.method = 'POST';
+      form.method = 'GET';
       form.action = FORM_ENDPOINT;  // GASの/exec に遷移
       form.style.display = 'none';
 
-      const add = (name, value) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
-      };
-
-      add('choices', choices.join(','));   // 例: "id_01,id_03,id_05"
+      const add = (k,v)=>{ const i=document.createElement('input'); i.type='hidden'; i.name=k; i.value=v; form.appendChild(i); };
+      add('choices', choices.join(','));   // "id_01,id_02,id_05"
       add('device_id', deviceId);
       add('ua', navigator.userAgent);
+      add('_', Date.now());                // ★ キャッシュ回避
 
       document.body.appendChild(form);
-      form.submit(); // ← ここでGASへ遷移（GAS側で2秒サンクス→元URLへ戻す）
+      form.submit(); // → GAS（書き込み）→ thanks.html（GitHub）→ 1.8秒後 index
     }
-
-    submitBtn.addEventListener('click', () => {
-      if (selected.size === 0) return;
-      postByForm(Array.from(selected), DEVICE_ID);
-    });
 
     function resetForm(){
       selected.clear();
@@ -191,5 +180,6 @@
 </body>
 
 </html>
+
 
 
