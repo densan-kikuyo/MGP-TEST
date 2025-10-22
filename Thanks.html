@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ありがとうございました</title>
+<style>
+  body{font-family:system-ui,-apple-system,Meiryo;text-align:center;padding:48px;background:#fff7f0}
+  .card{display:inline-block;background:#fff;padding:28px 24px;border-radius:16px;box-shadow:0 10px 0 rgba(0,0,0,.08)}
+  h1{margin:0 0 10px;font-size:22px}
+  p{margin:0 0 12px;color:#555}
+  a.btn{display:inline-block;margin-top:10px;background:#27c3a9;color:#fff;padding:10px 16px;border-radius:10px;text-decoration:none;font-weight:700}
+</style>
+<div class="card">
+  <h1>投票ありがとうございました！！ 🎉</h1>
+  <p>2秒後に最初の画面へ戻ります…</p>
+  <p><a id="back" class="btn" href="./">戻らない場合はこちら</a></p>
+</div>
+<script>
+  // GAS から ?back=... が渡ってくる想定。なければ ./ に戻す
+  const sp = new URLSearchParams(location.search);
+  const back = sp.get('back') || './';
+  document.getElementById('back').href = back;
+  setTimeout(()=>{ try{ top.location.replace(back);}catch(_){ location.replace(back);} }, 1800);
+</script>
