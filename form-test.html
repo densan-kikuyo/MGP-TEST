@@ -149,6 +149,11 @@
       submitBtn.disabled = (selected.size === 0);
     }
 
+    submitBtn.addEventListener('click', () => {
+      if (selected.size === 0) return;                // 保険
+      postByForm(Array.from(selected), DEVICE_ID);    // → GAS（/exec）へトップレベルGET
+    });
+    
     // ===== ここが「組織ログイン前提版」のキモ =====
     // fetch ではなく、フォームPOSTでGASへ画面遷移して送信
     function postByForm(choices, deviceId){
@@ -180,6 +185,7 @@
 </body>
 
 </html>
+
 
 
 
