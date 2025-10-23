@@ -1,6 +1,8 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <title>ありがとうございました</title>
 <style>
   body{font-family:system-ui,-apple-system,Meiryo;text-align:center;padding:48px;background:#fff7f0}
@@ -16,7 +18,4 @@
 </div>
 <script>
   const BACK = "https://densan-kikuyo.github.io/MGP-TEST/form-test.html";
-  // メタ＋JSの二段構え（iOS対策＆キャッシュ回避）
-  const backWithBust = BACK + "?_=" + Date.now();
-  setTimeout(()=>{ try{ top.location.replace(backWithBust);}catch(_){ location.replace(backWithBust);} }, 1800);
-</script>
+  const url  = BACK + "?_=" + Dat
